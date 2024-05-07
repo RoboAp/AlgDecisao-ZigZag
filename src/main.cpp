@@ -52,11 +52,15 @@ int main(int argc, char* argv[]) {
   float pos_blue_y = 0;
   float pos_blue_x = 0;
   float euc_dist = 0;
-  float dots_ref[6][2] = {{0,0},{100,0},{100,200},{300,200},{500,500},{800,900}};
-  float goal_dist;
-  int state = 0;
-  int pos_x_final = dots_ref[state][0];
-  int pos_y_final = dots_ref[state][1];
+  float goal_dist = 0;
+  int state = 1;
+  int scale = 1;
+  int pos_x_final = 0;
+  int pos_y_final = 1;
+  float goal_y = 0;
+  float goal_x = 0;
+
+
 
 
   RoboCupSSLClient client(10020, "224.5.23.2");
@@ -110,27 +114,30 @@ int main(int argc, char* argv[]) {
           pos_blue_y = robot.y();
 
           euc_dist = abs(sqrt(pow(pos_blue_x - pos_yellow_x,2)+pow(pos_blue_y - pos_yellow_y,2)));
-          goal_dist = abs(sqrt(pow(pos_blue_x - pos_x_final,2)+pow(pos_blue_y - pos_y_final,2)));
+          goal_dist = abs(sqrt(pow(pos_blue_x - goal_x,2)+pow(pos_blue_y - goal_y,2)));
           qDebug("Goal dist: %.2f",goal_dist);
           if(goal_dist <= 5){
-              state++;
-              if(state == 6){
-                  state = 0;
+              if (state == 1){
+                  goal_x += scale*400;
+              } else {
+                  goal_y += scale*400;
               }
+              if (goal_x >= 1200 || goal_y >= 1200){
+                  scale = -scale;
+              }
+              state = -state;
           }
 
           qDebug("State: %d",state);
+          qDebug("Pos final2: X=%.2f Y=%.2f", goal_x, goal_y);
 
-          int pos_x_final = dots_ref[state][0];
-          int pos_y_final = dots_ref[state][1];
+          float min_glob_x = -gradUAtt(0.5,pos_blue_x,goal_x); // +gradURep(0.5,pos_blue_x,pos_yellow_x,euc_dist,100);
+          float min_glob_y = -gradUAtt(0.5,pos_blue_y,goal_y); // +gradURep(0.5,pos_blue_y,pos_yellow_y,euc_dist,100);
 
-          float min_glob_x = -gradUAtt(0.2,pos_blue_x,pos_x_final) +gradURep(0.5,pos_blue_x,pos_yellow_x,euc_dist,100);
-          float min_glob_y = -gradUAtt(0.2,pos_blue_y,pos_y_final) +gradURep(0.5,pos_blue_y,pos_yellow_y,euc_dist,100);
-
-          //qDebug("Minimo Global: X=%.2f Y=%.2f",min_glob_x,min_glob_y);
+          // qDebug("Minimo Global: X=%.2f Y=%.2f",min_glob_x,min_glob_y);
           float vel_x = getVelocity(min_glob_x,5,0.01);
           float vel_y = getVelocity(min_glob_y,5,0.01);
-          //qDebug("Velocidades: X=%.2f Y=%.2f",vel_x,vel_y);
+          // qDebug("Velocidades: X=%.2f Y=%.2f",vel_x,vel_y);
           grSim_client.sendCommand(vel_x,vel_y, i);
 
         }
